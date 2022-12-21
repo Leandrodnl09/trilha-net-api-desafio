@@ -1,96 +1,118 @@
-using Microsoft.AspNetCore.Mvc;
-using TrilhaApiDesafio.Context;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using desafio_agendamento_de_tarefas.Context;
 using TrilhaApiDesafio.Models;
+using Microsoft.AspNetCore.Mvc;
 
-namespace TrilhaApiDesafio.Controllers
+
+namespace desafio_agendamento_de_tarefas.Controllers
 {
-    [ApiController]
-    [Route("[controller]")]
-    public class TarefaController : ControllerBase
+    public class TarefaController : Controller
     {
-        private readonly OrganizadorContext _context;
+        private readonly TarefaContext context;
 
-        public TarefaController(OrganizadorContext context)
+        public TarefaController(TarefaContext context)
         {
-            _context = context;
-        }
-
-        [HttpGet("{id}")]
-        public IActionResult ObterPorId(int id)
-        {
-            // TODO: Buscar o Id no banco utilizando o EF
-            // TODO: Validar o tipo de retorno. Se não encontrar a tarefa, retornar NotFound,
-            // caso contrário retornar OK com a tarefa encontrada
-            return Ok();
-        }
-
-        [HttpGet("ObterTodos")]
-        public IActionResult ObterTodos()
-        {
-            // TODO: Buscar todas as tarefas no banco utilizando o EF
-            return Ok();
-        }
-
-        [HttpGet("ObterPorTitulo")]
-        public IActionResult ObterPorTitulo(string titulo)
-        {
-            // TODO: Buscar  as tarefas no banco utilizando o EF, que contenha o titulo recebido por parâmetro
-            // Dica: Usar como exemplo o endpoint ObterPorData
-            return Ok();
-        }
-
-        [HttpGet("ObterPorData")]
-        public IActionResult ObterPorData(DateTime data)
-        {
-            var tarefa = _context.Tarefas.Where(x => x.Data.Date == data.Date);
-            return Ok(tarefa);
-        }
-
-        [HttpGet("ObterPorStatus")]
-        public IActionResult ObterPorStatus(EnumStatusTarefa status)
-        {
-            // TODO: Buscar  as tarefas no banco utilizando o EF, que contenha o status recebido por parâmetro
-            // Dica: Usar como exemplo o endpoint ObterPorData
-            var tarefa = _context.Tarefas.Where(x => x.Status == status);
-            return Ok(tarefa);
+            this.context = context;
         }
 
         [HttpPost]
-        public IActionResult Criar(Tarefa tarefa)
+        public ActionResult Editar(Tarefa tarefa)
         {
-            if (tarefa.Data == DateTime.MinValue)
-                return BadRequest(new { Erro = "A data da tarefa não pode ser vazia" });
+            var t = this.context.Tarefas.Find(tarefa.Id);
 
-            // TODO: Adicionar a tarefa recebida no EF e salvar as mudanças (save changes)
-            return CreatedAtAction(nameof(ObterPorId), new { id = tarefa.Id }, tarefa);
+            t.Titulo = tarefa.Titulo;
+            t.Descricao = tarefa.Descricao;
+            t.Data = tarefa.Data;
+            t.Status = tarefa.Status;
+
+            this.context.Update(t);
+            this.context.SaveChanges();
+            return RedirectToAction(nameof(Index));
         }
 
-        [HttpPut("{id}")]
-        public IActionResult Atualizar(int id, Tarefa tarefa)
+        [HttpPost]
+        public ActionResult ObterPorStatus(TipoStatus status)
         {
-            var tarefaBanco = _context.Tarefas.Find(id);
-
-            if (tarefaBanco == null)
-                return NotFound();
-
-            if (tarefa.Data == DateTime.MinValue)
-                return BadRequest(new { Erro = "A data da tarefa não pode ser vazia" });
-
-            // TODO: Atualizar as informações da variável tarefaBanco com a tarefa recebida via parâmetro
-            // TODO: Atualizar a variável tarefaBanco no EF e salvar as mudanças (save changes)
-            return Ok();
+            if (status == TipoStatus.Tudo)
+            {
+                return View(this.context.Tarefas.ToList());
+            }
+            var c = this.context.Tarefas.Where(x => x.Status == status).ToList();
+            return View(c);
         }
 
-        [HttpDelete("{id}")]
-        public IActionResult Deletar(int id)
+        [HttpPost]
+        public ActionResult ObterPorData(DateTime data)
         {
-            var tarefaBanco = _context.Tarefas.Find(id);
-
-            if (tarefaBanco == null)
-                return NotFound();
-
-            // TODO: Remover a tarefa encontrada através do EF e salvar as mudanças (save changes)
-            return NoContent();
+            var c = this.context.Tarefas.Where(x => x.Data == data).ToList();
+            return View(c);
         }
+
+        [HttpPost]
+        public ActionResult Index(string titulo)
+        {
+            var c = this.context.Tarefas.Where(x => x.Titulo.Contains(titulo)).ToList();
+            return View(c);
+        }
+
+        [HttpPost]
+        public ActionResult Criar(Tarefa tarefa)
+        {
+            this.context.Tarefas.Add(tarefa);
+            this.context.SaveChanges();
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpGet]
+        public ActionResult Criar()
+        {
+            return View();
+        }
+
+        [HttpGet]
+        public ActionResult Editar(int id)
+        {
+            var t = this.context.Tarefas.Find(id);
+            if (t == null)
+                return RedirectToAction(nameof(Index));
+            return View(t);
+        }
+
+        [HttpGet]
+        public ActionResult Index()
+        {
+            return View(this.context.Tarefas.ToList());
+        }
+
+        [HttpGet]
+        public ActionResult ObterPorData()
+        {
+            return View(this.context.Tarefas.ToList());
+        }
+
+        [HttpGet]
+        public ActionResult ObterPorStatus()
+        {
+            return View(this.context.Tarefas.ToList());
+        }
+
+        [HttpGet]
+        public ActionResult ObterPorTitulo()
+        {
+            return View();
+        }
+
+        [HttpGet]
+        public ActionResult Deletar(Tarefa tarefa)
+        {
+            var t = this.context.Tarefas.Find(tarefa.Id);
+            this.context.Tarefas.Remove(t);
+            this.context.SaveChanges();
+            return RedirectToAction(nameof(Index));
+        }
+
     }
 }
